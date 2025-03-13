@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction History{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>Transaction History</h2>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Back to Home</a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4>All Transactions</h4>
+            </div>
+            <div class="card-body p-0">
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Time</th>
+                                <th>Exchange</th>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th>Price</th>
+                                <th>Amount</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in transactions %}
+                            <tr>
+                                <td>{{ tx.id }}</td>
+                                <td>{{ tx.timestamp }}</td>
+                                <td>{{ tx.exchange|title }}</td>
+                                <td>{{ tx.symbol }}</td>
+                                <td class="{% if tx.side == 'buy' %}text-success{% else %}text-danger{% endif %}">
+                                    {{ tx.side|upper }}
+                                </td>
+                                <td>{{ tx.price }}</td>
+                                <td>{{ tx.amount }}</td>
+                                <td>{{ tx.total }}</td>
+                                <td>
+                                    <span class="badge bg-{% if tx.status == 'completed' %}success{% elif tx.status == 'simulated' %}info{% else %}warning{% endif %}">
+                                        {{ tx.status|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center p-4">
+                    <p>No transactions yet.</p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">View Order Books</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4>Transaction Summary</h4>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Total Transactions</h5>
+                                <p class="card-text display-4">{{ stats.total_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Exchanges Used</h5>
+                                <p class="card-text display-4">{{ stats.exchange_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="card bg-success text-white mb-3">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Buy Orders</h5>
+                                <p class="card-text display-4">{{ stats.buy_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-danger text-white mb-3">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Sell Orders</h5>
+                                <p class="card-text display-4">{{ stats.sell_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-center">No transaction data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4>Transaction Volume</h4>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                <canvas id="transactionChart" width="400" height="300"></canvas>
+                {% else %}
+                <p class="text-center">No transaction data available for chart.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if transactions %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('transactionChart').getContext('2d');
+    
+    // Extract data for the chart using JSON.parse to safely convert Jinja template variables to JavaScript
+    const exchanges = JSON.parse('{{ stats.volume_by_exchange|map(attribute="exchange")|map("title")|list|tojson }}');
+    const buyVolumes = JSON.parse('{{ stats.volume_by_exchange|map(attribute="buy_volume")|list|tojson }}');
+    const sellVolumes = JSON.parse('{{ stats.volume_by_exchange|map(attribute="sell_volume")|list|tojson }}');
+    
+    // Create the chart
+    const transactionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: exchanges,
+            datasets: [
+                {
+                    label: 'Buy Volume',
+                    data: buyVolumes,
+                    backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Sell Volume',
+                    data: sellVolumes,
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Exchange'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Volume (USDT)'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

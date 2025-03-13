@@ -10,7 +10,10 @@ from config.kraken import kraken
 from config.mexc import mexc
 
 def getOrderBook(exchange, symbol):
-
+    """
+    Fetch the order book for a given exchange and symbol.
+    Returns the complete order book data as a dictionary.
+    """
     # Fetch the order book based on the exchange
     if exchange == 'binance':
         order_book = binance.fetch_order_book(symbol)
@@ -35,9 +38,17 @@ def getOrderBook(exchange, symbol):
     else:
         raise ValueError(f"Unsupported exchange: {exchange}")
 
-    # Print the order book (for demonstration - it's usually a large dictionary)
-    # print(order_book)
+    # Return the complete order book data
+    return order_book
 
+def printOrderBook(exchange, symbol):
+    """
+    Fetch and print the order book for a given exchange and symbol.
+    This is a utility function for command-line usage.
+    """
+    # Get the order book
+    order_book = getOrderBook(exchange, symbol)
+    
     # Access bids (buy orders) and asks (sell orders)
     bids = order_book['bids']
     asks = order_book['asks']
@@ -48,18 +59,17 @@ def getOrderBook(exchange, symbol):
 
     # Example: Accessing the first few bids and asks
     print("--- Bids (Buy Orders) ---")
-    for bid in bids:
+    for bid in bids[:10]:  # Show top 10 bids
         price, quantity = bid
         print(f"Price: {price}, Quantity: {quantity}")
 
     print("\n--- Asks (Sell Orders) ---")
-    for ask in asks:
+    for ask in asks[:10]:  # Show top 10 asks
         price, quantity = ask
         print(f"Price: {price}, Quantity: {quantity}")
 
     # Example: calculate the mid price
     mid_price = (bids[0][0] + asks[0][0]) / 2
-    print(f"\nMid Price: {mid_price}")    
-
-
-
+    print(f"\nMid Price: {mid_price}")
+    
+    return order_book
